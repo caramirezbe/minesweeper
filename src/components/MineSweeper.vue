@@ -17,13 +17,12 @@
       <v-col id="grid" cols="8" class="success pa-5" >
             <div v-for="(rows, idx1) in cells" :key="idx1">
                 <div v-for="(cols, idx2) in cells" :key="idx2"
-                class="cell"
-                       
+                class="cell pt-2"
                 :class="{active: cells[idx1][idx2].usedCell}"
                 @click="openCell(idx1,idx2)"
                 @contextmenu.prevent="blockCell(idx1,idx2)"
                 ><p v-if="cells[idx1][idx2].usedCell && cells[idx1][idx2].isBomb" ><v-icon>mdi-bomb</v-icon></p>
-                <p v-else-if="cells[idx1][idx2].usedCell" @play="chekColor(idx1, idx2)">{{cells[idx1][idx2].bombsAround}}</p>
+                <p v-else-if="cells[idx1][idx2].usedCell" :style='{color:cells[idx1][idx2].color}'>{{cells[idx1][idx2].bombsAround}}</p>
                 <p v-else-if="cells[idx1][idx2].flag"><v-icon color="red">mdi-flag</v-icon></p>
                 </div>
             </div>  
@@ -39,12 +38,12 @@
       return{
         cols: 10,
         rows: 10,
-        bombs: 18,
+        bombs: 15,
         totalUncoverd: 0,
-        flag: 0,
+        flag: '',
         cells:[],
         winner: '',
-        color:['black','blue','green','yellow','grey','pink','purple','orange','red']
+        color:['black','blue','green','orange','grey','pink','purple','brown','red']
       }
     },
     computed:{
@@ -55,18 +54,34 @@
         return ':style="color=this.color[value]"';
       }
     },
+    
+    watch:{
+      flag(value){
+        console.log('entro');
+        if (value === 0 && this.checkBombs() === this.bombs)
+        {
+          let x = this.checkBombs();
+          console.log(x);
+          this.winner = 'winner';
+        }
+      }
+    },
 
 
     methods: {
       startGame(){ 
-        this.cells = [];
-        this.winner = '';
-        this.flag = this.bombs
+        this.restartGame();
         this.createGrid();
         this.spreadBomb();
         this.bombsAround();
         this.checkBombs();
 
+      },
+
+      restartGame(){
+        this.cells = [];
+        this.winner = '';
+        this.flag = this.bombs;
       },
       
       blockCell(idx1,idx2){
@@ -84,7 +99,7 @@
         for (let r=0; r < this.rows; r++ ){
             let col= [];
             for (let c=0; c < this.cols; c++){
-               col.push({bombsAround: 0, isBomb: false, usedCell: false, flag: false});
+               col.push({bombsAround: 0, isBomb: false, usedCell: false, flag: false, color: 'black'});
                console.log(col[c].isBomb)
             }
             this.cells.push(col);
@@ -106,19 +121,27 @@
       },
 
       checkBombs(){
+        let match = 0;
         for (let x = 0; x < this.rows; x++){
             for(let y= 0; y < this.cols; y++){
               if (this.cells[x][y].isBomb){  
-                console.log(x +',' +y);
+                console.log(x +',' +y);  
+                if(this.cells[x][y].flag){
+                  match++;
+                }
               }
             }
           }
+          console.log(match);
+        return match;
       },
 
       bombsAround(){
          for (let r=0; r < this.rows; r++ ){
             for (let c=0; c < this.cols; c++){
-             this.cells[r][c].bombsAround = this.countBombs(r,c);
+             const value = this.countBombs(r,c);
+             this.cells[r][c].bombsAround = value;
+             this.cells[r][c].color = this.color[value];
             }
           } 
       },
