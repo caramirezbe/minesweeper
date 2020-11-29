@@ -1,33 +1,29 @@
 <template>
   <v-container class="grey lighten-5">
-    
-    <v-row>
-      <v-col cols="4">
-        <v-list-item>
-            <v-btn class="primary" @click="startGame">Start game</v-btn>
-        </v-list-item>
-        <v-list-item>
-            <p>Flags: <v-icon color="red">mdi-flag </v-icon>{{flag}}</p>
-        </v-list-item>
-        <v-list-item v-if="winner">
-            <v-alert type="error" v-if="winner === 'lose'">Game Over!!! <h4>You lose</h4></v-alert>
-            <v-alert type="success" v-if="winner === 'winner'">Game Over!!! <h4>You win</h4></v-alert>  
-        </v-list-item>      
-      </v-col>
-      <v-col id="grid" cols="8" class="success pa-5" >
-            <div v-for="(rows, idx1) in cells" :key="idx1">
+      <v-banner>
+        <v-col>
+          <v-btn class="primary ma-5" @click="startGame">Start game</v-btn>
+          <v-btn text>Flags: <v-icon color="red">mdi-flag </v-icon>{{flag}}</v-btn>
+          <v-btn text>Timer: {{outputTimer}}</v-btn>
+        </v-col>
+      </v-banner>    
+      <div v-if="winner">
+        <v-alert type="error" v-if="winner === 'lose'">Game Over!!! <h4>You lose</h4></v-alert>
+        <v-alert type="success" v-if="winner === 'winner'">Game Over!!! <h4>You win</h4></v-alert>
+      </div>
+      <div class="grid-container">    
+          <div v-for="(rows, idx1) in cells" :key="idx1">
                 <div v-for="(cols, idx2) in cells" :key="idx2"
                 class="cell pt-2"
                 :class="{active: cells[idx1][idx2].usedCell}"
                 @click="openCell(idx1,idx2)"
                 @contextmenu.prevent="blockCell(idx1,idx2)"
-                ><p v-if="cells[idx1][idx2].usedCell && cells[idx1][idx2].isBomb" ><v-icon>mdi-bomb</v-icon></p>
-                <p v-else-if="cells[idx1][idx2].usedCell" :style='{color:cells[idx1][idx2].color}'>{{cells[idx1][idx2].bombsAround}}</p>
+                ><p v-if="cells[idx1][idx2].usedCell && cells[idx1][idx2].isBomb" ><v-icon color="red">mdi-bomb</v-icon></p>
+                <p v-else-if="cells[idx1][idx2].usedCell && cells[idx1][idx2].bombsAround != 0" :style='{color:cells[idx1][idx2].color}'>{{cells[idx1][idx2].bombsAround}}</p>
                 <p v-else-if="cells[idx1][idx2].flag"><v-icon color="red">mdi-flag</v-icon></p>
                 </div>
             </div>  
-      </v-col> 
-    </v-row>
+      </div>
   </v-container>
 </template>
 
@@ -43,9 +39,13 @@
         flag: '',
         cells:[],
         winner: '',
-        color:['black','blue','green','orange','grey','pink','purple','brown','red']
+        color:['black','blue','green','orange','grey','pink','purple','brown','red'],
+        outputTimer: '00:00',
+        time: 0,
+        running: true,
       }
     },
+
     computed:{
       checkColor(idx1,idx2){
         const value = this.cells[idx1][idx2].bombsAround
@@ -53,35 +53,42 @@
         console.log(this.color[value]);
         return ':style="color=this.color[value]"';
       }
+
     },
     
     watch:{
       flag(value){
-        console.log('entro');
         if (value === 0 && this.checkBombs() === this.bombs)
         {
-          let x = this.checkBombs();
-          console.log(x);
           this.winner = 'winner';
+          this.running = true;
         }
-      }
+      },
+       winner(value){
+        if(value === 'lose'){
+          this.openBombs();
+          this.running = true;
+        } 
+      },   
     },
 
 
     methods: {
       startGame(){ 
         this.restartGame();
+        this.resetTimer();
         this.createGrid();
         this.spreadBomb();
         this.bombsAround();
         this.checkBombs();
-
+        this.startTimer();
       },
 
       restartGame(){
         this.cells = [];
         this.winner = '';
         this.flag = this.bombs;
+        this.totalUncoverd = 0;
       },
       
       blockCell(idx1,idx2){
@@ -209,34 +216,100 @@
           }
           
         }
-      } 
+      },
+
+      openBombs(){
+        for(let x = 0; x < this.rows; x++){
+          for(let y  = 0; y < this.cols; y++){
+            if (this.cells[x][y].isBomb){
+              this.cells[x][y].usedCell = true;
+            }
+          }
+        }
+      },
+
+      startTimer(){
+          if(this.running){
+            this.running = false;
+            this.increment();
+          }else{
+            this.running = true;
+          }
+      },
+
+      resetTimer(){
+        this.running = true;
+        this.time= 0;
+        this.output= '00:00';
+      },
+
+      increment(){
+        if(!this.running){
+          setTimeout(() => {
+            this.time++;
+            let remain = this.time;
+            console.log('before min time: ' + remain);
+            let min = Math.floor(remain/60);
+            console.log('remain: ' + remain)
+            remain -= min *60;
+            console.log('afert min: ' + remain);
+            let sec = remain;
+            if (min <= 9){
+              min= "0" + min;
+            }
+            if (sec <= 9){
+              sec = "0" + sec;
+            }
+            this.outputTimer = min + ':' + sec;
+            this.increment();
+          }, 1000);
+        }
+      },
+
+
+
+
+
+
+
     },//method close
 
 }// export default close
 </script>
 
+
+
 <style scoped>
-	
-#grid{
-  display:grid;
-  grid-template-columns: repeat(10, 40px);
-  grid-template-rows: repeat(10, 40px);
-  
-}
-	
-.cell {
+
+.container {
+  width: 90%;
+  max-width: 40rem;
   text-align: center;
-  background-color: #42A5F5;
-  height: 40px;
-  border: 1px solid black;
+  margin: 1rem auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.26);
+  border-radius: 12px;
 }
 
-#grid div div:hover{
-  background-color: #90CAF9;
+.grid-container{
+  display: grid;
+  justify-content: center;
+  grid-template-columns: repeat(10, 50px);
+  grid-template-rows: repeat(10, 50px); 
+}
+
+.cell{
+  border-radius: 3px;
+  height: 50px;
+  border: 1px solid black;
+  background-color: #81C784;
+}
+
+.cell:hover{
+  background-color: #1B5E20;
 }
 
 .active{
   background-color: white;
-}
+} 
 
 </style>
